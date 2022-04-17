@@ -35,3 +35,7 @@ class Organism:
 
     def mate(self, other) -> Organism:
         return self.__class__(self._brain.mate(other._brain))
+
+    def color(self):
+        """Return a color based on the layers."""
+        return tuple([(round(self._brain.layers[index][0][0] + 2) * 100) for index in range(3)])

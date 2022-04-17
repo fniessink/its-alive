@@ -17,7 +17,7 @@ class MapSequenceListener:
         self._index = index
 
     def notify(self, map: Map[Organism], last: bool) -> None:
-        if self._index % 5 != 0:
+        if self._index % 10 != 0:
             return
         self._maps.append(map)
         if last:
@@ -32,9 +32,12 @@ class MapSequenceListener:
     @staticmethod
     def _create_image(map: Map[Organism]) -> Image:
         """Transform a map into an image."""
-        image = Image.new("RGB", (map.size, map.size), (255, 255, 255))
+        image = Image.new("RGB", (map.size * 2, map.size * 2), (0, 0, 0))
         draw = ImageDraw.Draw(image)
-        draw.point([(coordinate.x, coordinate.y) for coordinate in map.coordinates()], fill=(0, 0, 0))
+        for coordinate in map.coordinates():
+            organism = map[coordinate]
+            x, y = coordinate.x * 2, coordinate.y * 2
+            draw.ellipse([(x-2, y-2), (x+2, y+2)], fill=organism.color())
         return image
 
 
@@ -72,6 +75,15 @@ def left(map: Map[Organism]) -> Iterator[Organism]:
             yield organism
 
 
+def center(map: Map[Organism]) -> Iterator[Organism]:
+    """Return the organisms that are in the center."""
+    boundary1, boundary2 = map.size * 1 / 3, map.size * 2 / 3
+    for organism in map.items():
+        coordinate = map.coordinate(organism)
+        if boundary1 < coordinate.x < boundary2 and boundary1 < coordinate.y < boundary2:
+            yield organism
+
+
 if __name__ == '__main__':
     population_size = 200
     organisms = set([Organism() for _ in range(population_size)])
@@ -79,7 +91,7 @@ if __name__ == '__main__':
         map: Map[Organism] = Map(250)
         generation = Generation(map, organisms, MapSequenceListener(index))
         generation.run()
-        survivors = generation.survivors(left)
+        survivors = generation.survivors(center)
         nr_survivors = len(survivors)
         print(f"Generation {index}: {nr_survivors} survivors")
         if nr_survivors < 2:
