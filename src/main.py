@@ -17,7 +17,7 @@ class MapSequenceListener:
         self._index = index
 
     def notify(self, map: Map[Organism], last: bool) -> None:
-        if self._index % 100 != 0:
+        if self._index % 5 != 0:
             return
         self._maps.append(map)
         if last:
@@ -56,6 +56,7 @@ class Generation:
             for organism in map.items():
                 organism.tick(map, new_map)
             map = new_map
+        self._map = map
         self._listener.notify(map, last=True)
 
     def survivors(self, evaluation_function: Callable) -> list[Organism]:

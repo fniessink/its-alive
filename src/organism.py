@@ -10,7 +10,7 @@ from neural_network import NeuralNetwork
 
 class Organism:
     def __init__(self, brain: NeuralNetwork = None) -> None:
-        self._brain = brain or NeuralNetwork([4, 5, 2], output='sigmoid')
+        self._brain = brain or NeuralNetwork([4, 5, 5, 2], output='sigmoid')
         self._age = 0
         self._blocked = 0
 
