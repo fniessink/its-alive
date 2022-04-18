@@ -17,8 +17,6 @@ class MapSequenceListener:
         self._index = index
 
     def notify(self, map: Map[Organism], last: bool) -> None:
-        if self._index % 10 != 0:
-            return
         self._maps.append(map)
         if last:
             thread = threading.Thread(target=self._create_animated_gif)
@@ -54,13 +52,15 @@ class Generation:
         """Iterate over all organisms and make them do their thing."""
         map = self._map
         for _ in range(self._ticks):
-            self._listener.notify(map, last=False)
+            if self._listener:
+                self._listener.notify(map, last=False)
             new_map = map.empty_copy()
             for organism in map.items():
                 organism.tick(map, new_map)
             map = new_map
         self._map = map
-        self._listener.notify(map, last=True)
+        if self._listener:
+            self._listener.notify(map, last=True)
 
     def survivors(self, evaluation_function: Callable) -> list[Organism]:
         """Return a subset of the organisms that survive, given the evaluation function."""
@@ -89,7 +89,8 @@ if __name__ == '__main__':
     organisms = set([Organism() for _ in range(population_size)])
     for index in range(100_000):
         map: Map[Organism] = Map(250)
-        generation = Generation(map, organisms, MapSequenceListener(index))
+        listener = MapSequenceListener(index) if index % 10 == 0 else None
+        generation = Generation(map, organisms, listener)
         generation.run()
         survivors = generation.survivors(center)
         nr_survivors = len(survivors)

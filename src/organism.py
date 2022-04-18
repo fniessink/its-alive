@@ -25,7 +25,7 @@ class Organism:
         dx = round(output_x * 2) - 1
         dy = round(output_y * 2) - 1
         new_coordinate = old_coordinate.relative(dx, dy)
-        if old_map.is_occupied(new_coordinate) or new_map.is_occupied(new_coordinate):
+        if old_coordinate != new_coordinate and (old_map.is_occupied(new_coordinate) or new_map.is_occupied(new_coordinate)):
             new_map[old_coordinate] = self
             self._blocked = 1
         else:
