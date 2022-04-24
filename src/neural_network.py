@@ -4,6 +4,7 @@ Code below was copied and adapted from https://towardsdatascience.com/evolving-n
 """
 
 import copy
+from functools import cache
 
 import numpy as np
 
@@ -31,17 +32,23 @@ class NeuralNetwork:
             return lambda X : X
 
     def predict(self, X):
+        """
         if not X.ndim == 2:
             raise ValueError(f'Input has {X.ndim} dimensions, expected 2')
         if not X.shape[1] == self.layers[0].shape[0]:
             raise ValueError(f'Input has {X.shape[1]} features, expected {self.layers[0].shape[0]}')
+        """
         for index, (layer, bias) in enumerate(zip(self.layers, self.biases)):
-            X = X @ layer + np.ones((X.shape[0], 1)) @ bias
+            X = X @ layer + self.ones(X.shape[0], 1) @ bias
             if index == len(self.layers) - 1:
                 X = self.output(X) # output activation
             else:
                 X = np.clip(X, 0, np.inf)  # ReLU
         return X
+
+    @cache
+    def ones(self, width: int, height: int):
+        return np.ones((width, height))
 
     def mutate(self, stdev=0.03):
         for i in range(len(self.layers)):
@@ -50,12 +57,14 @@ class NeuralNetwork:
                 self.biases[i] += np.random.normal(0, stdev, self.biases[i].shape)
 
     def mate(self, other, mutate=True):
+        """
         if self.use_bias != other.use_bias:
             raise ValueError('Both parents must use bias or not use bias')
         if not len(self.layers) == len(other.layers):
             raise ValueError('Both parents must have same number of layers')
         if not all(self.layers[x].shape == other.layers[x].shape for x in range(len(self.layers))):
             raise ValueError('Both parents must have same shape')
+        """
 
         child = copy.deepcopy(self)
         for i in range(len(child.layers)):

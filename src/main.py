@@ -1,6 +1,7 @@
 """Main program."""
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
+import math
 import random
 import threading
 
@@ -32,6 +33,8 @@ class MapSequenceListener:
         """Transform a map into an image."""
         image = Image.new("RGB", (map.size * 2, map.size * 2), (0, 0, 0))
         draw = ImageDraw.Draw(image)
+        for wall in map.walls:
+            draw.line((wall[0][0]*2, wall[0][1] * 2, wall[1][0] * 2, wall[1][1] * 2), fill=(255, 255, 255))
         for coordinate in map.coordinates():
             organism = map[coordinate]
             x, y = coordinate.x * 2, coordinate.y * 2
@@ -42,7 +45,7 @@ class MapSequenceListener:
 class Generation:
     """Class representing a generation of organisms."""
 
-    def __init__(self, map: Map[Organism], organisms: set[Organism], listener: MapSequenceListener = None, ticks=400) -> None:
+    def __init__(self, map: Map[Organism], organisms: set[Organism], ticks: int, listener: MapSequenceListener = None) -> None:
         map.place_randomly(organisms)
         self._map = map
         self._ticks = ticks
@@ -62,43 +65,41 @@ class Generation:
         if self._listener:
             self._listener.notify(map, last=True)
 
-    def survivors(self, evaluation_function: Callable) -> list[Organism]:
-        """Return a subset of the organisms that survive, given the evaluation function."""
-        return list(evaluation_function(self._map))
+    def evaluated(self, evaluation_function: Callable) -> tuple[list[Organism], list[float], float]:
+        """Return the organisms ordered by the evaluation function."""
+        return evaluation_function(self._map)
 
 
-def left(map: Map[Organism]) -> Iterator[Organism]:
-    """Return the organisms that are on the left."""
-    boundary = map.size / 2
-    for organism in map.items():
-        if map.coordinate(organism).x < boundary:
-            yield organism
+def center(map: Map[Organism]) -> tuple[list[Organism], list[float], float]:
+    """Return the organisms that are closest to the center."""
+    center_x = center_y = map.size / 2
 
+    def distance_to_center(organism: Organism) -> float:
+        return (center_x - map.coordinate(organism).x)**2 + (center_y - map.coordinate(organism).y)**2
 
-def center(map: Map[Organism]) -> Iterator[Organism]:
-    """Return the organisms that are in the center."""
-    boundary1, boundary2 = map.size * 1 / 3, map.size * 2 / 3
-    for organism in map.items():
-        coordinate = map.coordinate(organism)
-        if boundary1 < coordinate.x < boundary2 and boundary1 < coordinate.y < boundary2:
-            yield organism
+    # Include the index in the decorated list because organisms are not sortable
+    decorated = [(distance_to_center(organism), index, organism) for index, organism in enumerate(map.items())]
+    decorated.sort()
+    decorated = decorated[:len(decorated) // 2]  # Keep the best half
+    distances = [item[0] for item in decorated]
+    max_distance = max(distances)
+    weights = [max_distance - distance for distance in distances]
+    organisms = [item[2] for item in decorated]
+    return organisms, weights, sum(distances) / len(distances)
 
 
 if __name__ == '__main__':
     population_size = 200
-    organisms = set([Organism() for _ in range(population_size)])
+    ticks = 300
+    organisms = set([Organism(ticks) for _ in range(population_size)])
     for index in range(100_000):
-        map: Map[Organism] = Map(250)
-        listener = MapSequenceListener(index) if index % 10 == 0 else None
-        generation = Generation(map, organisms, listener)
+        map: Map[Organism] = Map(200)
+        listener = MapSequenceListener(index) if index % 100 == 0 else None
+        generation = Generation(map, organisms, ticks, listener)
         generation.run()
-        survivors = generation.survivors(center)
-        nr_survivors = len(survivors)
-        print(f"Generation {index}: {nr_survivors} survivors")
-        if nr_survivors < 2:
-            print("Too few survivors left, giving up")
-            break
+        evaluated_organisms, weights, score = generation.evaluated(center)
+        print(f"Generation {index}: {round(score, 1)}")
         organisms = set()
         while len(organisms) < population_size:
-            index1, index2 = random.randint(0, nr_survivors-1), random.randint(0, nr_survivors-1)
-            organisms.add(survivors[index1].mate(survivors[index2]))
+            parent1, parent2 = random.choices(evaluated_organisms, weights=weights, k=2)
+            organisms.add(parent1.mate(parent2))

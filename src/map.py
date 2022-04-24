@@ -41,6 +41,13 @@ class Map(Generic[T]):
         self.size = size
         self._coordinates: dict[Coordinate, T] = {}
         self._items: dict[T, Coordinate] = {}
+        one_third = round(self.size / 3)
+        two_third = 2 * one_third
+        self.walls = [
+            ((one_third, one_third), (two_third, one_third)),
+            ((one_third, two_third), (two_third, two_third)),
+            ((two_third, one_third), (two_third, two_third)),
+        ]
 
     def __setitem__(self, coordinate: Coordinate, item: T) -> None:
         """Put the item on the coordinate. Raises KeyError if coordinate is occupied."""
@@ -65,6 +72,9 @@ class Map(Generic[T]):
     def is_occupied(self, coordinate: Coordinate) -> bool:
         """Return whether the coordinate is occupied."""
         x, y, size = coordinate.x, coordinate.y, self.size
+        for wall in self.walls:
+            if wall[0][0] <= x <= wall[1][0] and wall[0][1] <= y <= wall[1][1]:
+                return True
         return x < 0 or y < 0 or x >= size or y >= self.size or coordinate in self._coordinates
 
     def items(self) -> Sequence[T]:
